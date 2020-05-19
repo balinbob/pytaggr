@@ -2,7 +2,7 @@
 import re
 import sys
 
-__version__ = '0.1.13'
+__version__ = '0.2.1'
 __all__ = ['main', 'pytaggr', 'taggr']
 from libpytaggr.pytaggr import *
 if __name__ == '__main__':
