@@ -2,7 +2,6 @@
 
 CLI tool for working with tags and filenames of audio files using Mutagen
 
-
 Usage: pytaggr [options] filenames
 
 Options:
