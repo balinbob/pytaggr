@@ -13,8 +13,8 @@ import os
 from optparse import OptionParser as OP
 from mutagen import File
 from mutagen.mp3 import EasyMP3 as MP3
-from libpytaggr.taggr import Subster
-from libpytaggr import __version__
+from libtaggr.taggr import Subster
+from libtaggr import __version__
 
 
 class Confirmer():
