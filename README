@@ -1,3 +1,5 @@
+# To install from github.com using pip:
+# python -m pip install git+https://github.com/balinbob/pytaggr
 # pytaggr
 
 CLI tool for working with tags and filenames of audio files using Mutagen
