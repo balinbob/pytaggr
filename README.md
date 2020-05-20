@@ -1,15 +1,22 @@
 # pytaggr
 
-<h5>A command-line tool for tagging and editing tags in audio formats which can also<br>
+
+*	Program:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   pytaggr
+*	Author:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   Bob Allred
+*	License:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   GPLv3.0 or later
+*	Dependency:&nbsp;  Mutagen
+*	Language:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  Python
+
+<h6>A command-line tool for tagging and editing tags in audio formats which can also<br>
 tag from filenames/paths, and rename files from tags. It implements the Mutagen<br>
 pure-python library for working with audio metadata, which adheres to the principles<br>
-of standardized tagging.  It can also write multiple values for a tag (such as genre, or artist).</h5>
+of standardized tagging.  It can also write multiple values for a tag (such as genre, or artist).</h6>
 
-<h5>Using globs (*.flac, ~/Music/Album004/0?\ -\ *.mp3), batch editing of multiple files can<br>
-be done.  PyTaggr is well-suited for editing tracks in the files of an album, set, etc.</h5>
+<h6>Using globs (*.flac, ~/Music/Album/0?\ -\ *.mp3), batch editing of multiple files can<br>
+be done.  PyTaggr is well-suited for editing tracks in the files of an album, set, etc.</h6>
 
-<h5>Like many cli utilities, with a bit of practice it can become a powerful tool for working<br>
-with flac, apev2, ogg vorbis, & mp3 files.</h5>
+<h6>Like many cli utilities, with a bit of practice it can become a powerful tool for working<br>
+with flac, apev2, ogg vorbis, & mp3 files, and other formats.</h6>
 
 Usage: pytaggr [options] filenames
 
@@ -29,7 +36,7 @@ Usage: pytaggr [options] filenames
 *  --tag2fn PATTERN<br>
 	*    substitution pattern from existing tags, to rename files, ie: pytaggr '%n. %t' *.mp3<br>
 *  -j|--justify<br>
-	*    zero-justify tracknumbers ie 01 rather that 1<br>
+	*    zero-justify tracknumbers ie 01 rather than 1<br>
 *  --clear<br>
 	*    clear all tags<br>
 *  -n|--noact<br>

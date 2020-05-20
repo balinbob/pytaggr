@@ -4,17 +4,27 @@ version = "0.2.1"
 description = "used from the CLI or as a back-end to edit audio file names and metadata (tags)"
 authors = ["Robert Allred <balinbob@gmail.com>"]
 license = "GPL-3.0-or-later"
-include  = ["pytaggr"]
-
+include  = ["COPYING"]
+readme = "README.md"
+python = "^3..6"
+homepage = "https://github.com/balinbob/pytaggr"
+repository = "https://github.com/balinbob/pytaggr"
+documentation = "https://github.com/balinbob/pytaggr"
+keywords = ["music", "tag", "mutagen", "cli", "console"]
+classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: GPL-3.0-or-later",
+        "Operating System :: OS Independent",
+    ]
 packages = [
+    { include = "pytaggr" },
     { include = "libtaggr" },
-    { include = "bin" }
 ]
 
 
 [tool.poetry.dependencies]
-python = "^3.6"
 mutagen = "^1.38"
+python = "^3.6"
 [tool.poetry.dev-dependencies]
 
 [build-system]
@@ -22,4 +32,4 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry.scripts]
-pytaggr = "libtaggr:main"
+pytaggr = "pytaggr:main"

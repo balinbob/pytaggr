@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # vim: ts=4 sw=4 et:
 '''
     cli implementations of many mutagen metadata functions,
