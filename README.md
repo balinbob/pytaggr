@@ -1,4 +1,4 @@
-# pytaggr/
+# pytaggr
 
 <h5>A command-line tool for tagging and editing tags in audio formats which can also<br>
 tag from filenames/paths, and rename files from tags. It implements the Mutagen<br>
