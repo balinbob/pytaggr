@@ -58,12 +58,11 @@ Using no options (only a filename) prints all tags in the file
 
 pytaggr id3help: for help with id3 tags
 
-
 *	examples:<br>
-*       pytaggr -t artist="Jerry Garcia Band" --fn2tag '%n %t.flac' *.flac<br>
-	*	tags all flac files with an artist, and gets the tracknumber & title from the filename
+*	`pytaggr -t artist="Jerry Garcia Band" --fn2tag '%n %t.flac' *.flac` <br>
+	*	tags all flac files with an artist, and gets the tracknumber & title from the filename<br>
 
-*	pytaggr --tag2fn '~/Music/%a/%l/%n - %t.mp3' 1*.mp3<br>
+*	`pytaggr --tag2fn '~/Music/%a/%l/%n - %t.mp3' 1*.mp3` <br>
 	*  	renames all mp3 files which begin with '1' this way:<br>
 	*	~/Music/Artist Name/Album Title/Number - Title.mp3<br>
 	*	(provided the files are properly tagged)

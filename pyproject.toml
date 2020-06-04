@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "pytaggr"
-version = "0.2.1"
+version = "0.2.8"
 description = "used from the CLI or as a back-end to edit audio file names and metadata (tags)"
 authors = ["Robert Allred <balinbob@gmail.com>"]
 license = "GPL-3.0-or-later"
 include  = ["COPYING"]
 readme = "README.md"
-python = "^3..6"
+python = "^3.6"
 homepage = "https://github.com/balinbob/pytaggr"
 repository = "https://github.com/balinbob/pytaggr"
 documentation = "https://github.com/balinbob/pytaggr"
@@ -32,4 +32,4 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry.scripts]
-pytaggr = "pytaggr:main"
+pytaggr = "libtaggr:main"

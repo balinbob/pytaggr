@@ -1,0 +1,535 @@
+#!/usr/bin/env python
+# vim: set ft=python ts=4 sw=4 et ai:
+
+from __future__ import absolute_import
+from __future__ import print_function
+from os import path
+from os.path import isdir
+import re
+from glob import glob
+import sys
+from mutagen.mp3 import MP3
+from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3NoHeaderError
+from mutagen import File
+from six.moves import map
+
+
+class AlbumHeader(__builtins__.dict):
+    def __init__(self,keys=['artist','album','date','venue','composer','genre','comment','discnumber']):
+        __builtins__.dict.__init__(self)
+        for k in keys:
+            self.update({k:None})
+        self.keyorder=keys
+        self.default_keyorder=['artist','album','date','venue','composer','genre','comment','discnumber']
+        self.color='\033[0;36m'
+
+
+
+    def init(self,fname):
+        mf = mf_open(fname)
+        [self.update({k:mf.get(k)}) for k in self.keys( ) if k in mf]
+        del mf
+
+    def sync(self,fname):
+        mf = mf_open(fname)
+        for k in self.keys( ):
+            pass
+#            print k
+#            if not mf.get(k) or mf.get(k) != self.get(k):
+#                self.__delitem__(k)
+
+        del mf
+
+
+    def __sorted__(self):
+        return [k for k in self.keyorder if self.get(k)]
+
+    def show(self,color='',sort=True):
+        output=''
+        if color:
+            output='%s' % self.color
+        if sort:
+            self.keyorder=self.default_keyorder
+        for k in self.__sorted__( ):
+            for n,v in enumerate(self.get(k)):
+                if n == 0:
+                    output+='%-12s: %-40s\n' % (k,v)
+                elif v:
+                    output+='%-12s  %-40s\n' % ('',v)
+        if len(output) > len(self.color):
+            print(output[:-1], end=' ')
+            if color:
+                print("%s" % '\033[0m')
+            else:
+                print()
+
+
+
+
+
+
+
+
+
+class OParser(object):
+    def __init__(self,arglist=None):
+        self.audio_types = ('.flac','.ape','.ogg','.mp3')
+        self.glob(arglist)
+        optstr=''.join([arg[1:] for arg in arglist if arg[0]=='-'])
+        optstr=optstr.replace('l','b').replace('y','d')
+        self.mapping = {'a':'artist',
+                        'b':'album',
+                        'c':'composer',
+                        'd':'date',
+                        'y':'year',
+                        'v':'venue',
+                        'g':'genre',
+                        's':'set',
+                        'C':'comment',
+                        'i':'discnumber',
+                        'n':'tracknumber',
+                        't':'title' }
+        self.ckeys = 'abcdyvgsCint'
+        self.hkeys = self.ckeys[:-2]
+        self.keywords=[self.mapping[o] for o in self.ckeys]
+        try:
+            self.comma = optstr.index(',')
+            self.hdr=[o for o in optstr if o in self.hkeys and optstr.index(o)<self.comma]
+            self.cols=[o for o in optstr if o in self.ckeys and o not in self.hdr]
+        except ValueError as e:
+            self.comma = None
+            self.hdr=[ ]
+            self.cols=[o for o in optstr if o in self.ckeys]
+
+        if 'h' in optstr:
+            self.hdr=self.hkeys
+            self.cols='nt'
+            self.autohdr( )
+
+        if not self.hdr + self.cols:
+            self.cols=[o for o in self.ckeys]
+        self.optlist=[o for o in optstr if o not in ''.join(self.hdr+self.cols)+',h']
+        self.short_optstr=''.join(self.optlist)
+        self.optstr=optstr
+
+    def autohkeys(self):
+        return self.hkeys
+
+    def autockeys(self):
+        return ['n','t']
+
+    def hdrkeys(self):
+        if self.comma:
+            return [o for o in self.optstr if o in self.hkeys and
+                    self.optstr.index(o)<self.comma]
+        else:
+            return [ ]
+
+    def colkeys(self):
+        keys = [o for o in self.optstr if o in self.ckeys and
+                o not in self.hdrkeys( )]
+        if keys or self.hdrkeys( ): return keys
+        else: return [o for o in self.ckeys]
+
+    def autohdr(self):
+        self.hdrkeys=self.autohkeys
+        self.colkeys=self.autockeys
+
+        print(self.hdrkeys( ))
+
+
+    def hdrkeywords(self):
+        return [self.mapping[o] for o in self.hdrkeys( )]
+
+    def colkeywords(self):
+        return [self.mapping[o] for o in self.colkeys( )]
+
+    def fname_cols(self):
+        mo = re.search('f[0-9]+',self.optstr)
+        if mo:
+            return int( mo.group( )[1:] )
+        else:
+            return 20
+
+    def sort(self,li=[]):
+        if [o for o in li if len(o)>1]:
+            return [word for word in self.keywords if word in li]
+        else:
+            return [o for o in self.ckeys if o in li]
+
+    def getext(self,fn):
+        return path.splitext(fn)[1]
+
+    def glob(self,arglist=[]):
+        files=[]
+        filelist=[]
+        arglist=[arg for arg in arglist if arg[0]!='-']
+        for arg in arglist:
+            arg = re.sub('[\[\]]','?',arg)
+            if isdir(arg):
+                arg = path.join(arg,'*')
+            filelist.extend(glob(arg))
+        filelist.sort( )
+        for ext in self.audio_types:
+            files.extend( [f for f in filelist if self.getext(f)==ext] )
+        self.files=files
+
+
+class Shower:
+    def __init__(self,parser=None):
+        self.files = parser.files
+        self.hdrkeys = parser.hdrkeys( )
+        self.colkeys = parser.colkeys( )
+        self.parser = parser
+
+    def header(self):
+        hdr = AlbumHeader( self.parser.hdrkeywords( ) )
+        hdr.init(self.files[0])
+
+        list(map(hdr.sync,self.files))
+        return hdr
+
+    def clean(self,files,opts=None):
+        '''detects and optionally removes private tags from
+        mp3s (option -x to clean)'''
+        mp3files = [f for f in files if self.parser.getext(f) == '.mp3']
+        for fn in mp3files:
+            dirty = None
+            cleaned = None
+            try:
+                d = MP3(fn)
+            except:
+                print(sys.exc_info( ))
+                print("%f\t\tcan't open as MP3" % fn)
+                continue
+            for k in d:
+                if k.startswith('PRIV:'):
+                    if 'x' in opts:
+                        d.pop(k)
+                        cleaned = True
+                    else:
+                        dirty = True
+            if cleaned:
+                d.save()
+                print('cleaned!')
+            if dirty:
+                print("%s contains non-viewable PRIV frames, '-x' to clean" % fn)
+
+
+
+
+    def show( self ):
+        '''show tag and tech info, format specified by options'''
+        import mutagen
+        opts=self.parser.optstr
+        header = self.header( )
+        color='p' in opts
+        sort=not 'u' in opts
+        header.show( color, sort )
+
+
+        fn = self.files[0]
+        fnwidth = len(self.filename_column(fn,self.parser.fname_cols( )))
+        ext = self.parser.getext(fn)
+        if 'i' in opts and '.mp3' == ext:
+            s = ' info' + ' ' * 15 + 'filename' + ' '* (fnwidth-6)
+        else:
+            s = ' info   filename                     '
+        widths = []
+
+        mf = mf_open(fn)
+        self.grouping_dict = {}
+        self.group_list = self.parser.hdrkeywords( )
+        for key in self.group_list:
+            if key in mf:
+                val = mf.get(key)[0]
+                self.grouping_dict.update({key:val})
+
+
+        for k in self.parser.colkeywords( ):
+            if k in mf:
+                if k == 'tracknumber':
+                    hdr = ' tn'
+                    s += ('%s' % hdr)
+                elif k == 'discnumber':
+                    hdr = ' dn'
+                    s += ('%s' % hdr)
+                else:
+                    s += ('%s' % k)
+                    hdr = k
+                v = mf[k][0]
+                klen = len(hdr)
+                vlen = len(v)
+
+                s += ( klen-vlen if klen > vlen else vlen-klen+1 ) * ' '
+
+        colhdrs = s
+
+
+
+        for fn in self.files:
+
+            mf = mf_open(fn)
+            local_grouping_dict = {}
+            [local_grouping_dict.update({k:mf.get(k,[''])[0]}) for k in self.grouping_dict]
+            if 'G' in opts:
+                if self.grouping_dict != local_grouping_dict:
+                    self.grouping_dict = local_grouping_dict
+                    h = AlbumHeader( self.parser.hdrkeywords( ) )
+                    h.init(fn)
+                    h.show(color=True)
+
+
+#            mf = mf_open(fn)
+            self.clr = 31
+            s = '%s  ' % self.filename_column(fn,self.parser.fname_cols( ))
+
+            for k in self.parser.colkeywords( ):
+                multival=''
+                if k in mf:
+                    if color:
+                        s += self.insert_colors( opts )
+                    try:
+
+                        if 'j' in opts and k == 'tracknumber':
+                            n=len(str(len(self.files)))
+                            tn=str(mf.get(k,[0])[0])
+                            col = tn.rjust(n,'0')
+                            s += col
+                        else:
+                            n=0
+                            while True:
+
+                                try:
+                                    val = '%s' % mf.get(k)[n]
+                                except IndexError:
+                                    break
+                                if n>0:
+                                    multival += '\n' + val
+                                else:
+                                    multival=val
+                                n+=1
+                                if 'm' not in opts:
+                                    break
+
+                    except KeyError:
+                        pass
+
+                s += '%s ' % multival ##   .encode('utf-8')
+
+
+
+
+            if 'i' in opts:
+                ext = ext.lower()
+                if ext=='.mp3':
+                     s = self.tech(ext,MP3(fn).info) + s
+
+                else:
+                    info = self.tech(ext,File(fn).info)
+                    s = self.tech(ext,File(fn).info) + s
+
+            else:
+                info = self.getlength(ext,File(fn).info)
+                s = info + s
+
+
+
+            print(colhdrs, end=' ')
+            if colhdrs:
+                print('\n %s' % s, end=' ')
+                colhdrs = ''
+            else:
+                print(s, end=' ')
+            if color:
+                print('\033[m')
+            else:
+                print()
+
+
+
+            my_keys = ['TALB', 'TIT2', 'TRCK', 'TPE1', 'TPE2', 'TPOS', 'TDRC',
+                       'TCON', 'TVEN'
+            if 'E' in opts and ext.lower( ) == '.mp3':
+                mf = mutagen.File(fn)
+                for f in mf:
+                    if f in my_keys:
+                        continue
+                    elif f.startswith('APIC'):
+                        print('Picture  yes')
+                        continue
+                    elif not mf[f][0]:
+                        continue
+                    frame_desc = mf[f].__class__.__doc__.partition('\n')[0]
+                    tab = (32 - len(frame_desc))*' '
+                    print(frame_desc, tab, mf[f][0])
+                print()
+
+            my_keys = ['album','artist','date','venue','genre','title','discnumber','tracknumber','length']
+            if 'E' in opts and ext.lower( ) in ['.flac', '.ogg', '.ape']:
+                mf == mutagen.File(fn)
+                for key in mf:
+                    if key in my_keys:
+                        continue
+                    tab = (32 - len(key))*' '
+                    if len(mf[key]) > 1:
+                        print(key, tab, mf[key])
+                    elif len(mf[key]) == 1:
+                        print(key, tab, mf[key][0])
+
+
+    def getlength(self,ext,info):
+        sec = info.length%60
+        min = (info.length-sec)/60
+        s = '%02d:%02d  ' % (min,sec)
+        return s
+
+
+    def tech(self,ext,info):
+        sec = info.length%60
+        min = (info.length-sec)/60
+        if ext == '.mp3':
+            s = '%d/%d %3skbps %02d:%02d  ' % (
+                info.protected, info.sketchy,
+                round(info.bitrate/1000),
+                min, sec )
+        else:
+            s = '%d %02d:%02d  ' % (
+                info.channels,min,sec)
+        return s
+
+
+    def filename_column(self,fpath,width=20):
+        fname = path.basename(fpath)
+        fname,ext = path.splitext(fname)
+        fname = fname[:width]
+        fname += (width + 2 - len(fname))*' ' + ext
+        return fname
+
+    def insert_colors(self, opts):
+        intensity=0
+        if opts.count('p') > 1:
+            intensity=1
+        colr = self.clr
+        self.clr += 1
+        return  ('\033[%d;%2sm' % (intensity,colr))
+
+
+def _print(msg):
+    print((8*' '+ msg))
+    return
+
+def _help( ):
+    _print('There are several short (one-letter) options for showt.  Showt does not take long options')
+    _print('')
+    _print("'-p' & '-pp' are common options, to make the printout in color, which helps readability a lot")
+    _print("',' (comma) separates values below into header or row.  '-ali,dnt' shows artist, album, & discnumber")
+    _print("    in the header, date, tracknumber & title in the rows.  Tracknumber and title always show in rows")
+    _print("'-h' is very common, to print as much of the infomation in common with all tags in a header")
+    _print("        instead of in rows.  There are several options for controlling the output, which can be")
+    _print("        used with or without the '-h' option.")
+    _print("        '-a' show the artist")
+    _print("        '-b' show the album title")
+    _print("        '-c' composer")
+    _print("        '-C' comment")
+    _print("        '-d' date (or year)")
+    _print("        '-E' shows all items in the tag, but unrecognized items are unformatted")
+    _print("        '-f' controls the length in characters to allow the filename, ie -f30. Default is 20.")
+    _print("        '-g' genre")
+    _print("        '-G' Group files when a value in the header changes. ie on album title or discnumber change")
+    _print("        '-i' discnumber")
+    _print("        '-I' shows some tech info on the tracks at the left column in the rows.")
+    _print("        '-j' justify tracknumbers so all are the same width in digits")
+    _print("        '-t' tracknumber")
+    _print("        '-u' show rows in read sequence (unsorted)")
+    _print("        '-V' venue")
+    _print("")
+    return
+
+
+
+
+
+
+
+def mf_open(fname):
+    try:
+        return EasyID3(fname)
+    except ID3NoHeaderError:
+        return File(fname)
+    except:
+        return {}
+
+def main():
+    args = sys.argv[1:]
+    parser=OParser(args)
+    for arg in args:
+        if 'help' in arg:
+            _help( )
+            exit
+    if 'M' in parser.optstr:
+        try:
+            f=open('/etc/mpd.conf','r')
+        except IOError as e:
+            print(e)
+            exit(1)
+
+        while True:
+            line=f.readline( )
+            if line=='':
+                print("couldn't locate music directory")
+                f.close( )
+                exit(1)
+            if '#' in line:
+                i=line.index('#')
+                line=line[:i]
+            if re.search('.*music_directory.*\".*\".*',line):
+                mdir=re.sub('.*music_directory.*\"(.*)\".*','\\1',line)
+                mdir=mdir.strip('\n')
+                if mdir:
+                    break
+        mdir=path.expanduser(mdir)
+        f.close( )
+
+    if 's' in parser.optstr:
+        while True:
+            fname=sys.stdin.readline( )
+            if fname=='':
+                break
+#            fname=path.join( mdir,fname.strip('\n') )
+            fname=path.realpath( fname.strip('\n') )
+            parser.files.append( fname.strip('\n') )
+            if not path.isfile(fname.strip('\n')):
+                print('non-existent:', fname)
+                exit(1)
+            if len( parser.files ) > 40:
+                shower=Shower( parser )
+                shower.show( )
+                parser.files=[]
+        if len(parser.files):
+            shower=Shower( parser )
+            shower.show( )
+        exit( 0 )
+
+
+
+
+    if not parser.files:
+        exit(0)
+
+#    if 'e' in parser.optstr:
+#        parser.files.sort()
+
+    s = Shower( parser )
+    s.show( )
+
+    mp3s = [f for f in parser.files if parser.getext(f) == '.mp3']
+    if mp3s:
+        s.clean(mp3s,parser.optstr)
+
+
+
+if __name__=='__main__':
+    main()
+

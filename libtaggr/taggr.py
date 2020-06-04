@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 import re
+import sys
 from os.path import sep
 
 from libtaggr import __version__
@@ -20,13 +21,14 @@ class Subster():
                'g':'genre',
                'c':'composer',
                'j':'junk',
-               'i':'discnumber'}
+               'i':'discnumber',
+               'v':'venue'}
 
     keystr = ''.join(list(keydict.keys()))
     keypat = '%[' + keystr + ']'
+#    print (keypat)
     keypat = re.compile(keypat)
     fname = ''
-
     def __init__(self, pattern='', mode='fn2tag'):
         self.pattern = pattern or ''
         if mode == 'tag2fn':
@@ -34,6 +36,7 @@ class Subster():
         elif mode == 'fn2tag':
             self.fn2tag = pattern or ''
         self.mode = mode
+
         self.keys = [mp[1] for mp in re.findall(self.keypat, self.pattern)]
         self.lits = re.split(self.keypat, self.pattern)
         self.keyiter = iter(self.keys)
@@ -52,43 +55,55 @@ class Subster():
     def init(self):
         if self.lits[0] == '':
             literal = next(self.literals)
+        else:
+            literal = ''
+            for k in self.keydict:
+                key = '%' + k
+                print('%s: %s' % (key, self.keydict[k]))
+            print('pattern must begin with a %keycode')
+            sys.exit(255)
         try:
             self.fname = self.fname[len(literal):]
+            return None
         except AttributeError:
             pass
-        except ValueError:
-            raise ValueError
 
     def nextpair(self):
         try:
             key = next(self.keyiter)
+            keyname = self.keydict[key]
         except StopIteration:
             raise StopIteration
         try:
             lit = next(self.literals)
         except StopIteration:
             lit = ''
+        except ValueError:
+            # in case the first part of the pattern is a lit
+            lit = lit.strip()
+            return {keyname:[lit]}
         matchpat = self._get_regex(key, lit)
         mo = re.match(matchpat, self.fname)
         if mo:
             val = mo.group()[:-len(lit)]
             self.fname = self.fname[len(lit+val):]
-            keyname = self.keydict[key]
-            return {keyname:val}
-        raise ValueError
+            return {keyname:[val]}
+        lit = lit.strip()
+        return {keyname:[lit]}
+
 
     def getdict(self, fname):
-        self.fname = self.pathstrip(self.pattern, fname)
-        try:
-            self.init()
-        except ValueError:
-            return {}
         gdict = {}
+        fname.replace(str(sep + sep), sep)
+        self.fname = self.pathstrip(self.pattern, fname)
+        kv = self.init()
+        if kv:
+            gdict.update(kv)
         while True:
             try:
                 gdict.update(self.nextpair())
             except ValueError:
-                return {}
+                pass
             except StopIteration:
                 break
         return gdict
@@ -97,7 +112,6 @@ class Subster():
         fnlist = []
         self.keyiter = iter(self.keys)
         self.literals = iter(self.lits)
-
         while True:
             try:
                 fnlist.append(next(self.literals))
