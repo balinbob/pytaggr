@@ -8,7 +8,8 @@ from os.path import isdir
 import re
 from glob import glob
 import sys
-from mutagen.mp3 import MP3
+#from mutagen.mp3 import MP3
+from mutagen.mp3 import EasyMP3 as MP3
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3NoHeaderError
 from mutagen import File
@@ -90,6 +91,8 @@ class OParser(object):
                         'i':'discnumber',
                         'n':'tracknumber',
                         't':'title' }
+
+        MP3.ID3.RegisterTXXXKey('venue', 'VENUE')
         self.ckeys = 'abcdyvgsCint'
         self.hkeys = self.ckeys[:-2]
         self.keywords=[self.mapping[o] for o in self.ckeys]
@@ -136,7 +139,7 @@ class OParser(object):
         self.hdrkeys=self.autohkeys
         self.colkeys=self.autockeys
 
-        print(self.hdrkeys( ))
+#        print(self.hdrkeys( ))
 
 
     def hdrkeywords(self):
@@ -186,7 +189,6 @@ class Shower:
     def header(self):
         hdr = AlbumHeader( self.parser.hdrkeywords( ) )
         hdr.init(self.files[0])
-
         list(map(hdr.sync,self.files))
         return hdr
 
@@ -245,7 +247,6 @@ class Shower:
             if key in mf:
                 val = mf.get(key)[0]
                 self.grouping_dict.update({key:val})
-
 
         for k in self.parser.colkeywords( ):
             if k in mf:
@@ -350,7 +351,7 @@ class Shower:
 
 
             my_keys = ['TALB', 'TIT2', 'TRCK', 'TPE1', 'TPE2', 'TPOS', 'TDRC',
-                       'TCON', 'TVEN'
+                       'TCON', 'TXXX:VENUE']
             if 'E' in opts and ext.lower( ) == '.mp3':
                 mf = mutagen.File(fn)
                 for f in mf:
@@ -455,7 +456,8 @@ def _help( ):
 
 def mf_open(fname):
     try:
-        return EasyID3(fname)
+        return MP3(fname)
+#        return EasyID3(fname)
     except ID3NoHeaderError:
         return File(fname)
     except:
