@@ -2,10 +2,10 @@
 
 from __future__ import absolute_import
 import re
-import sys
 from os.path import sep
 
 from libtaggr import __version__
+
 
 class Subster():
     '''
@@ -13,22 +13,23 @@ class Subster():
         or
         s = Subster('%a/%l/%n - %t.flac', mode='fn2tag')
     '''
-    keydict = {'a':'artist',
-               'l':'album',
-               'n':'tracknumber',
-               't':'title',
-               'd':'date',
-               'g':'genre',
-               'c':'composer',
-               'j':'junk',
-               'i':'discnumber',
-               'v':'venue'}
+    keydict = {'a': 'artist',
+               'l': 'album',
+               'n': 'tracknumber',
+               't': 'title',
+               'd': 'date',
+               'g': 'genre',
+               'c': 'composer',
+               'j': 'junk',
+               'i': 'discnumber',
+               'v': 'venue'}
 
     keystr = ''.join(list(keydict.keys()))
     keypat = '%[' + keystr + ']'
 #    print (keypat)
     keypat = re.compile(keypat)
     fname = ''
+
     def __init__(self, pattern='', mode='fn2tag'):
         self.pattern = pattern or ''
         if mode == 'tag2fn':
@@ -53,20 +54,8 @@ class Subster():
         return '.+?'+lit
 
     def init(self):
-        if self.lits[0] == '':
-            literal = next(self.literals)
-        else:
-            literal = ''
-            for k in self.keydict:
-                key = '%' + k
-                print('%s: %s' % (key, self.keydict[k]))
-            print('pattern must begin with a %keycode')
-            sys.exit(255)
-        try:
-            self.fname = self.fname[len(literal):]
-            return None
-        except AttributeError:
-            pass
+        literal = next(self.literals)
+        self.fname = self.fname[len(literal):]
 
     def nextpair(self):
         try:
@@ -81,24 +70,21 @@ class Subster():
         except ValueError:
             # in case the first part of the pattern is a lit
             lit = lit.strip()
-            return {keyname:[lit]}
+            return {keyname: [lit]}
         matchpat = self._get_regex(key, lit)
         mo = re.match(matchpat, self.fname)
         if mo:
             val = mo.group()[:-len(lit)]
             self.fname = self.fname[len(lit+val):]
-            return {keyname:[val]}
+            return {keyname: [val]}
         lit = lit.strip()
-        return {keyname:[lit]}
-
+        return {keyname: [lit]}
 
     def getdict(self, fname):
         gdict = {}
         fname.replace(str(sep + sep), sep)
         self.fname = self.pathstrip(self.pattern, fname)
-        kv = self.init()
-        if kv:
-            gdict.update(kv)
+        self.init()
         while True:
             try:
                 gdict.update(self.nextpair())
