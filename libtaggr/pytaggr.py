@@ -69,14 +69,14 @@ class Speaker():
             else:
                 print(strng,)
 
-    def say(self, tabs, strng, error=False, verbose=False):
+    def say(self, tabs, strng, error=False, verbose=False, end='\n'):
         tab = '\t' * tabs
         if error:
             print('%s%s' % (tab, strng))
             sys.exit(1)
         self.quiet = self.quiet and not verbose
         if not self.quiet:
-            print('%s%s' % (tab, strng))
+            print('%s%s' % (tab, strng), end=end)
 
 
 class Helpers():
@@ -84,6 +84,7 @@ class Helpers():
         self.opt = opt
         self.fnames = fnames
         self.spkr = Speaker(opt.quiet, opt.verbose)
+        self._all = False
 
     def str2list(self, s):
         li = []
@@ -146,34 +147,52 @@ class Helpers():
                 print(e)
         return mf
 
+    def get_response(self, _use):
+        resp = 'x'
+        if _use:
+            # if self.opt.noact:
+            # return False
+            if self._all:
+                return True
+            if not any([self.opt.confirm, self.opt.fn2tag, self.opt.tag2fn]):
+                if not any([self.opt.tag, self.opt.add,
+                            self.opt.remove, self.opt.clear]):
+                    return True
+            while resp not in 'ynaq':
+                try:
+                    resp = input('confirm changes? [y]/n/a/q ')
+                except KeyboardInterrupt:
+                    print('Quitting')
+                    sys.exit(4)
+            if resp == '':
+                resp = 'y'
+            if resp[0].lower() == 'q':
+                print('Quitting')
+                sys.exit(0)
+            if resp[0].lower() == 'y':
+                return True
+            if resp[0].lower() == 'a':
+                self._all = True
+                return True
+        return False
+
     def confirm(self):
+        # print()
         ''' honor certain options regarding actual file-writing,
             and input of y or n to proceed with file-writing.
         '''
+        if self.opt.noact:
+            return False
+        if self.opt.noconfirm:
+            return True
 
         if any([self.opt.tag, self.opt.add, self.opt.remove, self.opt.clear,
                 self.opt.fn2tag, self.opt.tag2fn]):
             _use = True
         else:
             _use = False
-        _all = False
-
-        if _use:
-            if self.opt.noact:
-                return False
-            if _all:
-                return True
-            if not self.opt.confirm:
-                return True
-            resp = input('confirm changes? [y]/n/a ')
-            if resp == '':
-                resp = 'y'
-            if resp[0].lower() == 'y':
-                return True
-            if resp[0].lower() == 'a':
-                _all = True
-                return True
-        return False
+        # self._all = False
+        return self.get_response(_use)
 
     def subs(self, mf):
         opt = self.opt
@@ -325,7 +344,6 @@ def tagger(parser, args):
         sys.exit(err)
 
     fnum = 0
-#    idx = 0
     modded = any([opt.clear, opt.remove, opt.add, opt.tag, opt.fn2tag,
                   opt.tag2fn, opt.justify, opt.idx])
     spkr = Speaker(opt.quiet, opt.verbose)
@@ -338,12 +356,10 @@ def tagger(parser, args):
     for fname in fnames:
         fnum += 1
         vals = {}
-#        keys = []
         origfn = fname
         k = None
 
         mf = h.mf_open(fname)
-        print(os.path.basename(fname))
 
         if opt.clear:
             mf.clear()
@@ -422,23 +438,26 @@ def tagger(parser, args):
             print(mf.pprint())
             continue
 
+        spkr.say(0, fname)
         if opt.noact or opt.confirm:
             for k in vals:
                 print(k+'='+str(vals[k]))
         if opt.noact:
             continue
-        if opt.confirm and not h.confirm():
-            continue
+        if any([opt.clear, opt.remove, opt.add, opt.tag,
+                opt.justify, opt.idx, opt.fn2tag]):
+            if opt.confirm:
+                if h.confirm():
+                    mf.save()
+                    spkr.say(3, 'Tag saved!')
+            else:
+                mf.save()
+                spkr.say(3, 'Tag saved')
         if opt.tag2fn:
             if opt.map:
                 a, b = opt.map.split()
                 fname = re.sub(a, b, fname)
                 print('opt.map seems to be set')
-        try:
-            mf.save()
-        except Exception as e:
-            spkr.say(2, e)
-            raise IOError
 
         if opt.tag2fn:
             if sep in opt.tag2fn or sep in fname:
@@ -452,12 +471,14 @@ def tagger(parser, args):
                 pthname = os.path.join(os.path.dirname(origfn), fname)
             spkr.say(1, ' <-- %s' % origfn)
             spkr.say(1, ' --> %s' % pthname)
+            # if not opt.noconfirm:
+            # opt.confirm = True
             if not opt.noconfirm:
-                opt.confirm = True
                 if not h.confirm():
                     continue
             try:
                 os.renames(origfn, pthname)
+                spkr.say(3, 'Renamed!')
             except Exception as e:
                 spkr.say(2, e)
                 raise Exception
