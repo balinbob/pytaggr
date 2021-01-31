@@ -4,7 +4,8 @@ from __future__ import absolute_import
 import re
 from os.path import sep
 
-from libtaggr import __version__
+from libtaggr.__init__ import __version__
+a = __version__
 
 
 class Subster():
