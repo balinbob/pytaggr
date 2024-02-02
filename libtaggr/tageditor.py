@@ -4,6 +4,7 @@
 import os
 from os.path import sep
 from . cfg import opt, fnames, spkr, Helpers
+from glob import glob
 
 
 class TagEditors(object):
@@ -21,10 +22,21 @@ class TagEditors(object):
 
         self.hlpr = Helpers()
 
+    def glob_parse(self, fpaths):
+        fnames = []
+        for fpath in fpaths:
+            if isinstance(fpath, str):
+                fnames.extend(glob(fpath))
+            else:
+                fnames.extend(fpath)
+        return fnames
+
     def start(self):
+        self.fnames = self.glob_parse(self.fnames)
+
         self.chkfiles()
-        self.fnames = fnames
-        for fname in fnames:
+        # self.fnames = fnames
+        for fname in self.fnames:
             self.fnum += 1
             origfn = fname
             mf = self.hlpr.mf_open(fname)
@@ -79,7 +91,7 @@ class TagEditors(object):
 
     def chkfiles(self):
         err = 0
-        for fname in fnames:
+        for fname in self.fnames:
             if not os.path.exists(fname):
                 spkr.say(0, '%s: no such file' % fname)
                 err += 1
@@ -93,7 +105,7 @@ class TagEditors(object):
             n = origfn.count(sep)
             m = opt.tag2fn.strip(sep).count(sep)
             pthlist = origfn.split(sep)
-            pthname = os.path.join(sep.join(pthlist[:n-m]), fname)
+            pthname = os.path.join(sep.join(pthlist[:(n - m)]), fname)
         else:
             pthname = os.path.join(os.path.dirname(origfn), fname)
         spkr.say(1, ' <-- %s' % origfn)
